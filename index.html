@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Active AI – Dein Assistent</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #f4f3f1;
+    --dark: #eeecea;
+    --card: #ffffff;
+    --border: #d8d4d0;
+    --accent: #7b1828;
+    --accent-dark: #5a1020;
+    --accent-glow: rgba(123,24,40,0.10);
+    --text: #2a2a2a;
+    --muted: #888880;
+    --user-bg: #f9eced;
+    --user-border: #e8b8bc;
+    --bot-bg: #f4f3f1;
+    --radius: 14px;
+    --font-head: 'Bebas Neue', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
+
+  body {
+    background: #e8e6e2;
+    font-family: var(--font-body);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-image: radial-gradient(ellipse 500px 300px at 50% 0%, rgba(123,24,40,0.05) 0%, transparent 70%);
+  }
+
+  .widget-wrapper { width: 100%; max-width: 460px; }
+
+  .widget-header {
+    background: var(--accent);
+    border: 1px solid var(--accent-dark);
+    border-bottom: 2px solid var(--accent-dark);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-mark {
+    width: 42px; height: 42px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-head);
+    font-size: 22px;
+    color: #fff;
+    flex-shrink: 0;
+    letter-spacing: 1px;
+  }
+
+  .header-text h1 {
+    font-family: var(--font-head);
+    font-size: 22px;
+    color: #fff;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+
+  .header-text p {
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    font-weight: 400;
+    margin-top: 3px;
+    letter-spacing: 0.5px;
+  }
+
+  .status-pill {
+    margin-left: auto;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 10px;
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .status-pill::before {
+    content: '';
+    width: 5px; height: 5px;
+    background: #7fff7f;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .chat-container {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    display: flex;
+    flex-direction: column;
+    height: 520px;
+  }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+  }
+  .messages::-webkit-scrollbar { width: 3px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .message { display: flex; flex-direction: column; max-width: 85%; animation: fadeUp 0.25s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  .message.bot { align-self: flex-start; }
+  .message.user { align-self: flex-end; }
+
+  .bot-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+    padding-left: 2px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .message-bubble {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .bot .message-bubble {
+    background: var(--bot-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+
+  .user .message-bubble {
+    background: var(--user-bg);
+    border: 1px solid var(--user-border);
+    color: #7b1828;
+    border-bottom-right-radius: 4px;
+    font-weight: 500;
+  }
+
+  .typing-indicator {
+    display: none;
+    align-self: flex-start;
+    background: var(--bot-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    border-bottom-left-radius: 4px;
+    padding: 12px 16px;
+    gap: 4px;
+  }
+  .typing-indicator.visible { display: flex; align-items: center; animation: fadeUp 0.25s ease; }
+  .typing-indicator span { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: bounce 1.2s ease-in-out infinite; }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+
+  /* ── Lead Form ── */
+  .lead-form {
+    background: #fff;
+    border: 1.5px solid var(--accent);
+    border-radius: 12px;
+    padding: 14px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 300px;
+    animation: fadeUp 0.3s ease;
+  }
+  .lead-form p {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--accent);
+    line-height: 1.4;
+  }
+  .lead-form input,
+  .lead-form select,
+  .lead-form textarea {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 11px;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    color: var(--text);
+    background: var(--dark);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .lead-form input:focus,
+  .lead-form select:focus,
+  .lead-form textarea:focus { border-color: var(--accent); background: #fff; }
+  .lead-form textarea { resize: none; min-height: 60px; font-size: 12px; }
+  .lead-form .privacy-note {
+    font-size: 10.5px;
+    color: var(--muted);
+    line-height: 1.4;
+    border: none;
+    padding: 0;
+    background: none;
+  }
+  .lead-submit {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px;
+    font-family: var(--font-head);
+    font-size: 14px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-top: 2px;
+  }
+  .lead-submit:hover { background: var(--accent-dark); }
+  .lead-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* ── Termin-Banner ── */
+  .appt-banner {
+    background: linear-gradient(135deg, var(--accent-glow), rgba(123,24,40,0.05));
+    border: 1.5px solid var(--accent);
+    border-radius: 12px;
+    padding: 12px 14px;
+    max-width: 300px;
+    animation: fadeUp 0.3s ease;
+  }
+  .appt-banner p { font-size: 12.5px; color: var(--text); line-height: 1.5; margin-bottom: 10px; }
+  .appt-banner strong { color: var(--accent); }
+  .appt-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+  .appt-btn {
+    flex: 1;
+    border: 1px solid var(--accent);
+    border-radius: 7px;
+    padding: 7px 10px;
+    font-family: var(--font-body);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .appt-btn.primary { background: var(--accent); color: #fff; }
+  .appt-btn.primary:hover { background: var(--accent-dark); }
+  .appt-btn.secondary { background: transparent; color: var(--accent); }
+  .appt-btn.secondary:hover { background: var(--accent-glow); }
+
+  .suggestions {
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    border-top: 1px solid var(--border);
+    background: var(--dark);
+  }
+
+  .chip {
+    background: #fff;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-weight: 500;
+    transition: all 0.18s;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+  .input-area {
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    background: var(--dark);
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+
+  .input-field {
+    flex: 1;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 13px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    resize: none;
+    min-height: 40px;
+    max-height: 100px;
+    outline: none;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+  }
+  .input-field:focus { border-color: var(--accent); }
+  .input-field::placeholder { color: var(--muted); }
+
+  .send-btn {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.12s;
+  }
+  .send-btn:hover { background: var(--accent-dark); transform: scale(1.05); }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .widget-footer {
+    text-align: center;
+    font-size: 10.5px;
+    color: var(--muted);
+    margin-top: 10px;
+    letter-spacing: 0.3px;
+  }
+  .widget-footer span { font-weight: 600; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="widget-wrapper">
+  <div class="widget-header">
+    <div class="logo-mark">AF</div>
+    <div class="header-text">
+      <h1>ACTIVE AI</h1>
+      <p>Dein Assistent für Active Fitness</p>
+    </div>
+    <div class="status-pill">Online</div>
+  </div>
+
+  <div class="chat-container">
+    <div class="messages" id="messages">
+      <div class="message bot">
+        <div class="bot-label">Active AI</div>
+        <div class="message-bubble">
+          Hey! 👋 Ich bin der digitale Assistent von <strong>Active Fitness Hövelhof</strong>.<br><br>
+          Was kann ich für dich tun?
+        </div>
+      </div>
+    </div>
+
+    <div class="typing-indicator" id="typing">
+      <span></span><span></span><span></span>
+    </div>
+
+    <div class="suggestions">
+      <button class="chip" onclick="sendSuggestion('Wann habt ihr auf?')">🕐 Öffnungszeiten</button>
+      <button class="chip" onclick="sendSuggestion('Ich möchte Mitglied werden')">✍️ Mitglied werden</button>
+      <button class="chip" onclick="sendSuggestion('Welche Kurse bietet ihr an?')">🥊 Kurse & Zeiten</button>
+      <button class="chip" onclick="sendSuggestion('Wie läuft die Sauna ab?')">🧖 Sauna</button>
+    </div>
+
+    <div class="input-area">
+      <textarea
+        class="input-field"
+        id="userInput"
+        placeholder="Deine Frage..."
+        rows="1"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="widget-footer">
+    Assistent von <span>Active Fitness Hövelhof</span>
+  </div>
+</div>
+
+<script>
+const API_URL = '/.netlify/functions/chat';
+
+const SYSTEM_PROMPT = `Du bist der freundliche digitale Assistent von Active Fitness in Hövelhof.
+
+ÜBER DAS STUDIO:
+- Name: Active Fitness (Inhaber betreibt es mit Leidenschaft)
+- Adresse: Hövelmarkt 5, 33161 Hövelhof
+- Telefon: 05257 / 930 597
+- E-Mail: info@fitness-active.de
+- Seit über 25 Jahren im Herzen von Hövelhof
+- Fitness auf 4 Etagen – familiäres, privat geführtes Studio
+- Kein Massenanbieter – persönliche Atmosphäre, man ist keine Nummer
+
+ÖFFNUNGSZEITEN FITNESS:
+- Montag bis Freitag: 08:30 – 22:00 Uhr (Vor-Ort-Beratung ab 18:00 Uhr)
+- Samstag: 10:00 – 17:00 Uhr (Beratung mit Termin)
+- Sonntag: 10:00 – 17:00 Uhr (Beratung mit Termin)
+
+ÖFFNUNGSZEITEN SAUNA:
+- Dienstag: 09:00–12:00 Infrarot Männer / 12:30–22:00 Damen Sauna
+- Donnerstag: 09:00–12:00 Infrarot Damen / 12:30–22:00 Männer Sauna
+- Mittwoch & Freitag: Sauna mietbar 15:00–22:00 Uhr (mit Voranmeldung)
+- Samstag: 10:00–17:00 Gemischte Sauna
+- Sonntag: Keine Sauna
+- Montag: Keine Sauna
+- Sauna auch für Nicht-Mitglieder nutzbar!
+
+SAUNA DETAILS:
+- Finnische Sauna, ca. 85 Grad, Platz für 10 Personen
+- Ruhebereich mit Liegemöglichkeiten
+- Massageangebot zwischen Saunagängen (Termin absprechen)
+- Sauna mieten: jeden Mittwoch möglich, für Freunde/Familie/Kollegen → Anruf: 05257 / 930597
+
+KURSE & ZEITEN:
+Muay Thai:
+- Dienstag 19:00–20:30 Uhr
+- Donnerstag 19:00–20:30 Uhr
+- Vielseitige Kampfkunst: Schläge, Tritte, Ellbogen, Kniestöße, Clinch
+- Preis für Mitglieder: 25 € für eine 5er-Karte
+- Preis für Nicht-Mitglieder: 30 € für eine 5er-Karte
+- WICHTIG: Es gibt KEIN Boxen mehr – das Angebot heißt jetzt Muay Thai
+
+Zumba Erwachsene:
+- Montag 20:15–21:15 Uhr (Start 05.01.2026)
+- Mittwoch 18:30–19:30 Uhr (Start 07.01.2026)
+- Lateinamerikanische Tanzfitness, für Beginner und Fortgeschrittene
+
+Zumba Kids & Teens:
+- Montag 16:00–17:00 Zumba For Kids (3–6 Jahre)
+- Montag 17:00–18:00 Zumba Teens (12–16 Jahre)
+- Mittwoch 16:00–17:00 Zumba Kids (4–6 Jahre)
+- Mittwoch 17:00–18:00 Zumba Kids (7–11 Jahre)
+
+TRAINING & BEREICHE:
+- Krafttraining & Fitness (4 Etagen)
+- Powerkraftraum "Down Under"
+- Herzkreislauftraining / Ausdauer
+- Functional Training (Naomi Tower)
+- Boxtraining-Bereich (jetzt Muay Thai)
+- Viele Geräte, Kundschaft verläuft sich gut – nicht überfüllt
+
+BEWERTUNGEN (Zusammenfassung):
+- Sehr positiv: Familiäre Atmosphäre, persönlicher Inhaber, vielseitiges Angebot
+- Positiv: Sauber, gut ausgestattetes Studio, nicht zu voll
+- Leicht kritisch: Wochenend-Öffnungszeiten könnten länger sein
+- Stammkunden bleiben gerne – hohe Zufriedenheit
+
+DEIN VERHALTEN – WICHTIG:
+
+1. RÜCKFRAGEN: Stell kurze Rückfragen um den Bedarf zu verstehen, bevor du Lösungen anbietest.
+   Beispiel: Wenn jemand fragt "Was kostet eine Mitgliedschaft?" → Erst fragen: "Worauf hast du Lust? Eher Krafttraining, Kurse oder beides? 💪"
+
+2. TERMIN VORSCHLAGEN: Wenn jemand klares Interesse zeigt (z.B. Mitglied werden, Probetraining, Kurs ausprobieren, Studio kennenlernen), schlage proaktiv einen Termin vor.
+   Schreibe dann genau: [SHOW_APPT_BANNER]
+   Beispiel-Situationen für Terminvorschlag:
+   - Jemand sagt er möchte Mitglied werden
+   - Jemand fragt nach Probetraining
+   - Jemand ist an einem Kurs interessiert und hat noch Fragen
+   - Jemand möchte die Preise persönlich besprechen
+
+3. LEAD-FORMULAR: Zeige das Formular NUR wenn der Nutzer ausdrücklich nach Kontakt, Rückruf oder schriftlicher Anfrage fragt.
+   Schreibe dann genau: [SHOW_LEAD_FORM]
+   Beispiel-Situationen für Lead-Formular:
+   - "Kann mich jemand zurückrufen?"
+   - "Ich würde gerne kontaktiert werden"
+   - "Wie kann ich eine Anfrage stellen?"
+
+4. KONTEXT: Merke dir im Gespräch was der Nutzer sucht (Kurs, Mitgliedschaft, Sauna etc.) und was sein Anliegen ist. Das wird später für das Formular genutzt.
+
+DEIN TON:
+- Sprich Nutzer mit "du" an – locker, motivierend, freundlich
+- Kurze klare Antworten
+- Gelegentlich passende Emojis (Fitness-Kontext: 💪🔥🥊🧖)
+- Bei Fragen zu Mitgliedschaftspreisen: Weise auf direkten Kontakt hin (Telefon oder Vor-Ort)
+
+Antworte immer auf Deutsch.`;
+
+let conversationHistory = [];
+let isLoading = false;
+let leadFormShown = false;
+let apptBannerShown = false;
+
+// Tracks context extracted from conversation
+let conversationContext = {
+  interest: '',   // e.g. "Muay Thai Kurs"
+  concern: ''     // e.g. "Möchte erst mal reinschnuppern"
+};
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+function sendSuggestion(text) {
+  document.getElementById('userInput').value = text;
+  sendMessage();
+}
+function escapeHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function formatText(t) {
+  return escapeHtml(t)
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+}
+
+// Extract context from conversation for the lead form
+function updateContext(userMessage) {
+  const msg = userMessage.toLowerCase();
+
+  // Detect interest
+  if (msg.includes('muay thai') || msg.includes('kampf') || msg.includes('boxen')) {
+    conversationContext.interest = 'Muay Thai';
+  } else if (msg.includes('zumba')) {
+    conversationContext.interest = 'Zumba';
+  } else if (msg.includes('sauna')) {
+    conversationContext.interest = 'Sauna';
+  } else if (msg.includes('mitglied') || msg.includes('mitgliedschaft')) {
+    conversationContext.interest = 'Mitgliedschaft';
+  } else if (msg.includes('probetraining') || msg.includes('probe')) {
+    conversationContext.interest = 'Probetraining';
+  } else if (msg.includes('kurs') || msg.includes('kurse')) {
+    conversationContext.interest = conversationContext.interest || 'Kurs';
+  }
+
+  // Store concern as summary of last user messages
+  if (userMessage.length > 15) {
+    conversationContext.concern = userMessage.substring(0, 100);
+  }
+}
+
+function appendMessage(role, text) {
+  const messages = document.getElementById('messages');
+
+  // Handle special tags – strip them from display text
+  let clean = text;
+  let showLead = false;
+  let showAppt = false;
+
+  if (clean.includes('[SHOW_LEAD_FORM]')) {
+    clean = clean.replace('[SHOW_LEAD_FORM]', '').trim();
+    showLead = true;
+  }
+  if (clean.includes('[SHOW_APPT_BANNER]')) {
+    clean = clean.replace('[SHOW_APPT_BANNER]', '').trim();
+    showAppt = true;
+  }
+
+  if (role === 'bot') {
+    if (clean) appendBotBubble(clean);
+    if (showAppt && !apptBannerShown) { showApptBanner(); apptBannerShown = true; }
+    if (showLead && !leadFormShown) { showLeadForm(); leadFormShown = true; }
+  } else {
+    const div = document.createElement('div');
+    div.className = 'message user';
+    div.innerHTML = `<div class="message-bubble">${escapeHtml(text)}</div>`;
+    messages.appendChild(div);
+  }
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function appendBotBubble(text) {
+  const messages = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'message bot';
+  div.innerHTML = `<div class="bot-label">Active AI</div><div class="message-bubble">${formatText(text)}</div>`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// ── Appointment Banner ──────────────────────────────────────────
+function showApptBanner() {
+  const messages = document.getElementById('messages');
+  const wrapper = document.createElement('div');
+  wrapper.className = 'message bot';
+  wrapper.id = 'apptBannerWrapper';
+
+  const interestText = conversationContext.interest
+    ? ` zu <strong>${conversationContext.interest}</strong>` : '';
+
+  wrapper.innerHTML = `
+    <div class="bot-label">Active AI</div>
+    <div class="appt-banner">
+      <p>📅 Möchtest du einen <strong>Beratungstermin</strong>${interestText} vereinbaren? Wir zeigen dir alles persönlich – ganz ohne Druck.</p>
+      <div class="appt-actions">
+        <button class="appt-btn primary" onclick="requestAppt()">Ja, Termin anfragen 💪</button>
+        <button class="appt-btn secondary" onclick="dismissAppt()">Nein danke</button>
+      </div>
+    </div>`;
+  messages.appendChild(wrapper);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function requestAppt() {
+  // Mark interest as "Beratungstermin" and open lead form
+  conversationContext.concern = conversationContext.concern || 'Möchte einen Beratungstermin vereinbaren';
+  document.getElementById('apptBannerWrapper')?.remove();
+  if (!leadFormShown) { showLeadForm(); leadFormShown = true; }
+}
+
+function dismissAppt() {
+  document.getElementById('apptBannerWrapper')?.remove();
+  appendBotBubble('Kein Problem! 😊 Ruf uns einfach an wenn du soweit bist: 📞 05257 / 930 597');
+}
+
+// ── Lead Form ───────────────────────────────────────────────────
+function showLeadForm() {
+  const messages = document.getElementById('messages');
+  const form = document.createElement('div');
+  form.className = 'message bot';
+  form.id = 'leadFormWrapper';
+
+  const prefillConcern = conversationContext.concern
+    ? escapeHtml(conversationContext.concern) : '';
+  const prefillInterest = conversationContext.interest || '';
+
+  form.innerHTML = `
+    <div class="bot-label">Active Fitness</div>
+    <div class="lead-form">
+      <p>📋 Hinterlasse kurz deine Daten – wir melden uns bei dir:</p>
+      <input type="text" id="leadName" placeholder="Dein Name *" />
+      <input type="tel" id="leadPhone" placeholder="Telefonnummer *" />
+      <input type="email" id="leadEmail" placeholder="E-Mail (optional)" />
+      <select id="leadTopic">
+        <option value="${prefillInterest}">${prefillInterest || 'Thema wählen...'}</option>
+        ${prefillInterest ? '' : `
+        <option>Mitgliedschaft & Preise</option>
+        <option>Probetraining</option>
+        <option>Muay Thai Kurs</option>
+        <option>Zumba Kurs</option>
+        <option>Sauna mieten</option>
+        <option>Sauna für Nicht-Mitglieder</option>
+        <option>Beratungstermin</option>
+        <option>Allgemeine Frage</option>`}
+      </select>
+      <textarea id="leadNote" placeholder="Dein Anliegen (optional)">${prefillConcern}</textarea>
+      <p class="privacy-note">🔒 Deine Daten werden nur für die Kontaktaufnahme genutzt und nicht weitergegeben.</p>
+      <button class="lead-submit" id="leadSubmitBtn" onclick="submitLead()">ANFRAGE SENDEN 🔥</button>
+    </div>`;
+  messages.appendChild(form);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+async function submitLead() {
+  const name = document.getElementById('leadName')?.value?.trim();
+  const phone = document.getElementById('leadPhone')?.value?.trim();
+  const email = document.getElementById('leadEmail')?.value?.trim() || '';
+  const topic = document.getElementById('leadTopic')?.value?.trim() || '';
+  const note = document.getElementById('leadNote')?.value?.trim() || '';
+
+  if (!name || !phone) {
+    alert('Bitte Name und Telefonnummer angeben.');
+    return;
+  }
+
+  const btn = document.getElementById('leadSubmitBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Wird gesendet...'; }
+
+  // Send to Netlify function → Google Sheets
+  try {
+    await fetch('/.netlify/functions/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, email, topic, note, date: new Date().toISOString() })
+    });
+  } catch (e) {
+    console.warn('Lead konnte nicht gespeichert werden:', e);
+  }
+
+  document.getElementById('leadFormWrapper')?.remove();
+  appendBotBubble(`Super, ${name}! ✅ Deine Anfrage ist angekommen.\n\nWir melden uns so schnell wie möglich bei dir zurück.\n\nOder ruf uns direkt an: 📞 05257 / 930 597`);
+}
+
+async function sendMessage() {
+  if (isLoading) return;
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  updateContext(text);
+
+  input.value = '';
+  input.style.height = 'auto';
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  appendMessage('user', text);
+  conversationHistory.push({ role: 'user', content: text });
+
+  const typing = document.getElementById('typing');
+  typing.classList.add('visible');
+  document.getElementById('messages').scrollTop = 99999;
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: conversationHistory,
+        system: SYSTEM_PROMPT
+      })
+    });
+
+    const data = await response.json();
+    const reply = data.content?.[0]?.text || 'Entschuldigung, da ist etwas schiefgelaufen.';
+    conversationHistory.push({ role: 'assistant', content: reply });
+    typing.classList.remove('visible');
+    appendMessage('bot', reply);
+
+  } catch (err) {
+    typing.classList.remove('visible');
+    appendBotBubble('Technischer Fehler – ruf uns einfach direkt an: 📞 05257 / 930 597');
+  }
+
+  isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+</script>
+
+</body>
+</html>
