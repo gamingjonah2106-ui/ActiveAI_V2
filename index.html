@@ -652,28 +652,31 @@ function showLeadForm() {
   form.innerHTML = `
     <div class="bot-label">Active Fitness</div>
     <div class="lead-form">
-      <p>📋 Hinterlasse kurz deine Daten – wir melden uns bei dir:</p>
+      <p>Hinterlasse kurz deine Daten - wir melden uns bei dir:</p>
       <input type="text" id="leadName" placeholder="Dein Name *" />
       <input type="tel" id="leadPhone" placeholder="Telefonnummer *" />
       <input type="email" id="leadEmail" placeholder="E-Mail (optional)" />
       <select id="leadTopic">
-        <option value="${prefillInterest}">${prefillInterest || 'Thema wählen...'}</option>
+        <option value="${prefillInterest}">${prefillInterest || 'Thema waehlen...'}</option>
         ${prefillInterest ? '' : `
         <option>Mitgliedschaft & Preise</option>
         <option>Probetraining</option>
         <option>Muay Thai Kurs</option>
         <option>Zumba Kurs</option>
         <option>Sauna mieten</option>
-        <option>Sauna für Nicht-Mitglieder</option>
+        <option>Sauna fuer Nicht-Mitglieder</option>
         <option>Beratungstermin</option>
         <option>Allgemeine Frage</option>`}
       </select>
       <textarea id="leadNote" placeholder="Dein Anliegen (optional)">${prefillConcern}</textarea>
-      <p class="privacy-note">🔒 Deine Daten werden nur für die Kontaktaufnahme genutzt und nicht weitergegeben.</p>
-      <button class="lead-submit" id="leadSubmitBtn" onclick="submitLead()">ANFRAGE SENDEN 🔥</button>
+      <p class="privacy-note">Deine Daten werden nur fuer die Kontaktaufnahme genutzt und nicht weitergegeben.</p>
+      <button class="lead-submit" id="leadSubmitBtn">ANFRAGE SENDEN</button>
     </div>`;
   messages.appendChild(form);
   messages.scrollTop = messages.scrollHeight;
+
+  // addEventListener statt onclick - zuverlaessiger
+  document.getElementById('leadSubmitBtn').addEventListener('click', submitLead);
 }
 
 async function submitLead() {
@@ -691,19 +694,21 @@ async function submitLead() {
   const btn = document.getElementById('leadSubmitBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Wird gesendet...'; }
 
-  // Send to Netlify function → Google Sheets
   try {
-    await fetch('/.netlify/functions/lead', {
+    console.log('Sende Lead an Netlify:', { name, phone });
+    const res = await fetch('/.netlify/functions/lead', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, phone, email, topic, note, date: new Date().toISOString() })
     });
+    const data = await res.json();
+    console.log('Lead Response:', res.status, data);
   } catch (e) {
-    console.warn('Lead konnte nicht gespeichert werden:', e);
+    console.error('Lead Fehler:', e);
   }
 
   document.getElementById('leadFormWrapper')?.remove();
-  appendBotBubble(`Super, ${name}! ✅ Deine Anfrage ist angekommen.\n\nWir melden uns so schnell wie möglich bei dir zurück.\n\nOder ruf uns direkt an: 📞 05257 / 930 597`);
+  appendBotBubble('Super, ' + name + '! Deine Anfrage ist angekommen.\n\nWir melden uns so schnell wie moeglich bei dir zurueck.\n\nOder ruf uns direkt an: 05257 / 930 597');
 }
 
 async function sendMessage() {
