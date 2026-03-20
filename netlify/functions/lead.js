@@ -16,7 +16,17 @@ exports.handler = async function(event, context) {
 
     // ── 1. Service Account JSON aus Env laden ──────────────────
     const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-    creds.private_key = creds.private_key.replace(/\\n/g, '\n');
+
+    // Private Key: beide Varianten abfangen
+    let pk = creds.private_key;
+    pk = pk.replace(/\\n/g, '\n');
+    creds.private_key = pk;
+
+    // Debug-Log (kannst du nach dem Test wieder löschen)
+    console.log('Key starts:', pk.substring(0, 40));
+    console.log('Has newlines:', pk.includes('\n'));
+    console.log('Client email:', creds.client_email);
+
     const sheetId = process.env.GOOGLE_SHEET_ID;
 
     // ── 2. JWT für Google API erstellen ───────────────────────
@@ -37,7 +47,7 @@ exports.handler = async function(event, context) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        values: [[formatted, name, phone, email || '–', topic || '–', note || '–']]
+        values: [[formatted, name, phone, email || '-', topic || '-', note || '-']]
       })
     });
 
@@ -69,7 +79,6 @@ async function getGoogleToken(creds) {
   const encode = obj => Buffer.from(JSON.stringify(obj)).toString('base64url');
   const signingInput = `${encode(header)}.${encode(payload)}`;
 
-  // RSA-SHA256 Signatur via Node crypto
   const crypto = require('crypto');
   const sign = crypto.createSign('RSA-SHA256');
   sign.update(signingInput);
@@ -77,7 +86,6 @@ async function getGoogleToken(creds) {
 
   const jwt = `${signingInput}.${signature}`;
 
-  // JWT gegen Access Token tauschen
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
