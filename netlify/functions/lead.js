@@ -14,29 +14,16 @@ exports.handler = async function(event, context) {
   try {
     const { name, phone, email, topic, note, date } = JSON.parse(event.body);
 
-    // ── 1. Service Account JSON aus Env laden ──────────────────
     const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-
-    // Private Key: beide Varianten abfangen
-    let pk = creds.private_key;
-    pk = pk.replace(/\\n/g, '\n');
+    let pk = creds.private_key.replace(/\\n/g, '\n');
     creds.private_key = pk;
-
-    // Debug-Log (kannst du nach dem Test wieder löschen)
-    console.log('Key starts:', pk.substring(0, 40));
-    console.log('Has newlines:', pk.includes('\n'));
-    console.log('Client email:', creds.client_email);
-
     const sheetId = process.env.GOOGLE_SHEET_ID;
 
-    // ── 2. JWT für Google API erstellen ───────────────────────
     const token = await getGoogleToken(creds);
 
-    // ── 3. Datum formatieren ──────────────────────────────────
     const d = new Date(date);
     const formatted = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 
-    // ── 4. Zeile in Google Sheets schreiben ───────────────────
     const range = encodeURIComponent('Leads!A:F');
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED`;
 
@@ -64,7 +51,13 @@ exports.handler = async function(event, context) {
   }
 };
 
-// ── Google JWT ohne externe Library ───────────────────────────────
+function toBase64url(buffer) {
+  return buffer.toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
 async function getGoogleToken(creds) {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: 'RS256', typ: 'JWT' };
@@ -76,13 +69,15 @@ async function getGoogleToken(creds) {
     iat: now,
   };
 
-  const encode = obj => Buffer.from(JSON.stringify(obj)).toString('base64url');
+  const encode = obj => toBase64url(Buffer.from(JSON.stringify(obj)));
   const signingInput = `${encode(header)}.${encode(payload)}`;
 
   const crypto = require('crypto');
   const sign = crypto.createSign('RSA-SHA256');
   sign.update(signingInput);
-  const signature = sign.sign(creds.private_key, 'base64url');
+  // base64 erst, dann manuell zu base64url konvertieren
+  const sigBase64 = sign.sign(creds.private_key, 'base64');
+  const signature = sigBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
   const jwt = `${signingInput}.${signature}`;
 
