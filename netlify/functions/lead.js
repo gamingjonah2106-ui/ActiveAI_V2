@@ -12,22 +12,26 @@ exports.handler = async function(event, context) {
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers, body: 'Method not allowed' };
 
   try {
-    const { name, phone, email, topic, note, date } = JSON.parse(event.body);
+    const { name, phone, email, topic, note, date, consentDate } = JSON.parse(event.body);
 
     // ── 1. Service Account JSON aus Env laden ──────────────────
     const creds = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
     creds.private_key = creds.private_key.replace(/\\n/g, '\n');
     const sheetId = process.env.GOOGLE_SHEET_ID;
 
-    // ── 2. JWT für Google API erstellen ───────────────────────
+    // ── 2. JWT fuer Google API erstellen ───────────────────────
     const token = await getGoogleToken(creds);
 
     // ── 3. Datum formatieren ──────────────────────────────────
     const d = new Date(date);
     const formatted = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 
-    // ── 4. Zeile in Google Sheets schreiben ───────────────────
-    const range = encodeURIComponent('Leads!A:F');
+    // Einwilligungsdatum formatieren
+    const c = new Date(consentDate);
+    const consentFormatted = `Ja, ${String(c.getDate()).padStart(2,'0')}.${String(c.getMonth()+1).padStart(2,'0')}.${c.getFullYear()} ${String(c.getHours()).padStart(2,'0')}:${String(c.getMinutes()).padStart(2,'0')}`;
+
+    // ── 4. Zeile in Google Sheets schreiben (A:G) ─────────────
+    const range = encodeURIComponent('Leads!A:G');
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED`;
 
     const res = await fetch(url, {
@@ -37,7 +41,7 @@ exports.handler = async function(event, context) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        values: [[formatted, name, phone, email || '–', topic || '–', note || '–']]
+        values: [[formatted, name, phone, email || '-', topic || '-', note || '-', consentFormatted]]
       })
     });
 
@@ -69,7 +73,6 @@ async function getGoogleToken(creds) {
   const encode = obj => Buffer.from(JSON.stringify(obj)).toString('base64url');
   const signingInput = `${encode(header)}.${encode(payload)}`;
 
-  // RSA-SHA256 Signatur via Node crypto
   const crypto = require('crypto');
   const sign = crypto.createSign('RSA-SHA256');
   sign.update(signingInput);
@@ -77,7 +80,6 @@ async function getGoogleToken(creds) {
 
   const jwt = `${signingInput}.${signature}`;
 
-  // JWT gegen Access Token tauschen
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
