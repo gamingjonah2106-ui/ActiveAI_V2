@@ -226,6 +226,35 @@
     padding: 0;
     background: none;
   }
+  .lead-form .consent-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  .lead-form .consent-row input[type="checkbox"] {
+    width: 15px;
+    min-width: 15px;
+    height: 15px;
+    margin-top: 2px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    border-radius: 3px;
+    background: var(--dark);
+  }
+  .lead-form .consent-label {
+    font-size: 10.5px;
+    color: var(--muted);
+    line-height: 1.5;
+    cursor: pointer;
+    font-weight: 400;
+  }
+  .lead-form .consent-label a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
   .lead-submit {
     background: var(--accent);
     color: #fff;
@@ -679,7 +708,12 @@ function showLeadForm() {
         <option>Allgemeine Frage</option>`}
       </select>
       <textarea id="leadNote" placeholder="Dein Anliegen (optional)">${prefillConcern}</textarea>
-      <p class="privacy-note">Deine Daten werden nur fuer die Kontaktaufnahme genutzt und nicht weitergegeben.</p>
+      <div class="consent-row">
+        <input type="checkbox" id="leadConsent" />
+        <label class="consent-label" for="leadConsent">
+          Ich stimme zu, dass meine Daten (Name, Telefon, E-Mail, Anliegen) gespeichert und zur Kontaktaufnahme genutzt werden. Die Einwilligung kann jederzeit widerrufen werden. Weitere Infos in der Datenschutzerklaerung.
+        </label>
+      </div>
       <button class="lead-submit" id="leadSubmitBtn">ANFRAGE SENDEN</button>
     </div>`;
   messages.appendChild(form);
@@ -696,8 +730,14 @@ async function submitLead() {
   const topic = document.getElementById('leadTopic')?.value?.trim() || '';
   const note = document.getElementById('leadNote')?.value?.trim() || '';
 
+  const consent = document.getElementById('leadConsent')?.checked;
+
   if (!name || !phone) {
     alert('Bitte Name und Telefonnummer angeben.');
+    return;
+  }
+  if (!consent) {
+    alert('Bitte stimme der Datenspeicherung zu um die Anfrage zu senden.');
     return;
   }
 
@@ -709,7 +749,7 @@ async function submitLead() {
     const res = await fetch('/.netlify/functions/lead', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, email, topic, note, date: new Date().toISOString() })
+      body: JSON.stringify({ name, phone, email, topic, note, date: new Date().toISOString(), consentDate: new Date().toISOString() })
     });
     const data = await res.json();
     console.log('Lead Response:', res.status, data);
